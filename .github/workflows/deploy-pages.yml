@@ -1,0 +1,111 @@
+name: Build Web e publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Cada job recebe apenas as permissões que usa.
+permissions: {}
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Godot 4.6.3 · Web single-thread
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    container:
+      # Standard + templates oficiais 4.6.3 já instalados nesta imagem.
+      # Tag e digest conferidos no Docker Hub; não depende dos templates locais.
+      image: barichello/godot-ci:4.6.3@sha256:d5af2e2b6e0c1e3c4232103578be316856e2215e4273cc17cebb72822eefa29b
+    env:
+      GODOT_BIN: godot
+      # O Actions pode alterar HOME; os templates da imagem ficam em /root.
+      GODOT_TEMPLATE_DATA: /root/.local/share
+      GODOT_SILENCE_ROOT_WARNING: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Encontrar projeto
+        id: project
+        run: |
+          if [[ -f project.godot ]]; then
+            echo 'path=.' >> "$GITHUB_OUTPUT"
+          elif [[ -f porto-lume/project.godot ]]; then
+            echo 'path=porto-lume' >> "$GITHUB_OUTPUT"
+          else
+            echo 'project.godot não encontrado na raiz nem em porto-lume/.' >&2
+            exit 1
+          fi
+
+      - name: Conferir engine e templates exatos
+        run: |
+          godot_version="$(godot --version)"
+          echo "Godot: $godot_version"
+          case "$godot_version" in
+            4.6.3.stable.*) ;;
+            *) echo 'Esta build exige Godot 4.6.3 stable Standard.' >&2; exit 1 ;;
+          esac
+          templates="$GODOT_TEMPLATE_DATA/godot/export_templates/4.6.3.stable"
+          test -s "$templates/version.txt"
+          test "$(cat "$templates/version.txt")" = '4.6.3.stable'
+          test -s "$templates/web_nothreads_debug.zip"
+          test -s "$templates/web_nothreads_release.zip"
+
+      - name: Importar e exportar Web
+        working-directory: ${{ steps.project.outputs.path }}
+        run: bash tools/export_web.sh
+
+      - name: Validar o protótipo
+        working-directory: ${{ steps.project.outputs.path }}
+        run: godot --headless --path . --script res://tests/smoke_test.gd
+
+      - name: Conferir arquivos publicados
+        working-directory: ${{ steps.project.outputs.path }}
+        run: |
+          for required_file in index.html index.js index.wasm index.pck; do
+            test -s "build/web/$required_file"
+          done
+          test "$(od -An -tx1 -N4 build/web/index.wasm | tr -d ' \n')" = '0061736d'
+          test "$(od -An -tx1 -N4 build/web/index.pck | tr -d ' \n')" = '47445043'
+          grep -q 'index.js' build/web/index.html
+          # checkout@v4 usa Node 20 do runner; ele pode não estar no PATH da imagem.
+          node_binary="$(command -v node || true)"
+          if [[ -z "$node_binary" ]]; then
+            node_binary=/__e/node20/bin/node
+          fi
+          "$node_binary" --check build/web/index.js
+          touch build/web/.nojekyll
+
+      - name: Preparar artefato do Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.project.outputs.path }}/build/web
+
+  deploy:
+    name: Publicar jogo
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Ler configuração do Pages
+        uses: actions/configure-pages@v5
+
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

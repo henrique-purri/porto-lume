@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/city.gd" id="1_city"]
+[ext_resource type="PackedScene" path="res://vehicles/parked_car.tscn" id="2_car"]
+
+[node name="City" type="Node2D"]
+script = ExtResource("1_city")
+
+[node name="Buildings" type="Node2D" parent="."]
+
+[node name="Vehicles" type="Node2D" parent="."]
+
+[node name="ParkedCar" parent="Vehicles" instance=ExtResource("2_car")]
+position = Vector2(960, 1110)
+
+[node name="ParkedCar2" parent="Vehicles" instance=ExtResource("2_car")]
+position = Vector2(740, 840)
+rotation = 1.5707964
+body_color = Color(0.81, 0.72, 0.47, 1)

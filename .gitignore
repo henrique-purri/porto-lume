@@ -1,0 +1,8 @@
+.godot/
+.DS_Store
+__pycache__/
+*.pyc
+export_credentials.cfg
+build/web/*
+!build/web/.gitkeep
+
