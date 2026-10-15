@@ -1,6 +1,14 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/parked_car.gd" id="1_car"]
 
-[node name="ParkedCar" type="Node2D"]
+[sub_resource type="RectangleShape2D" id="CarShape"]
+size = Vector2(42, 80)
+
+[node name="ParkedCar" type="StaticBody2D"]
+collision_layer = 4
+collision_mask = 6
 script = ExtResource("1_car")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CarShape")

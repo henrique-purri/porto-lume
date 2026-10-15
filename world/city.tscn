@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/city.gd" id="1_city"]
 [ext_resource type="PackedScene" path="res://vehicles/parked_car.tscn" id="2_car"]
+[ext_resource type="PackedScene" path="res://vehicles/driveable_car.tscn" id="3_driveable"]
 
 [node name="City" type="Node2D"]
 script = ExtResource("1_city")
@@ -10,7 +11,7 @@ script = ExtResource("1_city")
 
 [node name="Vehicles" type="Node2D" parent="."]
 
-[node name="ParkedCar" parent="Vehicles" instance=ExtResource("2_car")]
+[node name="ParkedCar" parent="Vehicles" instance=ExtResource("3_driveable")]
 position = Vector2(960, 1110)
 
 [node name="ParkedCar2" parent="Vehicles" instance=ExtResource("2_car")]

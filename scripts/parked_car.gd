@@ -1,5 +1,5 @@
 extends Node2D
-## Placeholder exclusivamente visual. Sem física, interação ou direção.
+## Arte compartilhada pelo carro controlável e pelo veículo estacionado.
 
 @export var body_color := Color("ee876e")
 

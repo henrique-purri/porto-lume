@@ -5,46 +5,25 @@ na mesma rede, servidor local ou backend. A exportação usa **Godot 4.6.3 Stand
 Compatibility/WebGL 2 e WebAssembly sem threads**, compatível com hospedagem
 estática no GitHub Pages sem cabeçalhos COOP/COEP.
 
+**Jogo:** [https://henrique-purri.github.io/porto-lume/](https://henrique-purri.github.io/porto-lume/)
+
 **Repositório:** [henrique-purri/porto-lume](https://github.com/henrique-purri/porto-lume),
-branch `main`. O projeto foi enviado e o build Web passou no GitHub Actions com
-Godot e templates 4.6.3. O artefato `github-pages` contém o jogo exportado.
-A publicação exige habilitar Pages nas configurações: a integração tem acesso
-ao código e ao Actions, mas a API administrativa do Pages retorna 403.
+branch `main`. O MVP já está publicado e foi validado pelo usuário no Safari do
+iPhone. Pages usa **GitHub Actions** como origem; não é necessário habilitá-lo
+novamente para atualizar o jogo.
 
-O responsável pelo repositório deve abrir
-[Settings → Pages](https://github.com/henrique-purri/porto-lume/settings/pages)
-e escolher **GitHub Actions** em **Source**. Depois, repita o job de publicação
-que falhou ou execute o workflow novamente. O repositório continua privado;
-se o GitHub exigir um plano compatível, essa escolha cabe ao proprietário.
+## Atualizar a versão publicada
 
-## Preparar o repositório uma única vez
-
-1. Entre na sua conta em [github.com](https://github.com/) pelo Safari e crie um
-   repositório, por exemplo **porto-lume**. Um repositório público pode usar Pages
-   no plano gratuito. Para privado, confirme a disponibilidade no seu plano.
-2. Coloque o conteúdo desta pasta na raiz do repositório, preservando os caminhos,
-   incluindo a pasta oculta **`.github/`**, os testes e `tools/`. Não envie caches
-   `.godot/`, ferramentas locais nem `build/`. A branch principal esperada é
-   **`main`**.
-3. A opção mais prática é abrir uma sessão Codex com esse repositório GitHub
-   conectado e acesso de escrita para enviar os arquivos. Se usar **Add file →
-   Upload files** no Safari, extraia qualquer ZIP antes no app Arquivos e preserve
-   as pastas. Enviar apenas um ZIP para o repositório não instala o projeto nem
-   ativa o workflow. O seletor de arquivos do iPhone pode limitar o envio de
-   pastas; **Solicitar Site para Computador** pode facilitar a interface, mas não
-   substitui o envio de cada arquivo com o caminho correto.
-4. Abra **Settings → Pages → Build and deployment → Source** e escolha
-   **GitHub Actions**. No iPhone, o menu **…** ou a versão para computador ajuda a
-   encontrar Settings.
-5. Em **Actions**, abra **Build Web e publicar no GitHub Pages** e toque em
-   **Run workflow → main → Run workflow**. Faça isso após configurar Pages; os
-   próximos pushes em `main` já iniciam tudo automaticamente.
-6. Espere os jobs **Godot 4.6.3 · Web single-thread** e **Publicar jogo** ficarem
-   verdes. Abra a URL do ambiente **github-pages** no resultado do workflow ou
-   em **Settings → Pages → Visit site**.
-
-A URL costuma ser `https://SEU_USUARIO.github.io/porto-lume/`. Use a URL exibida
-pelo GitHub: o nome real da conta e do repositório determinam o endereço.
+1. Envie as alterações para `main`, preservando `.github/workflows/deploy-pages.yml`,
+   os testes, `tools/` e a configuração Web. Não envie caches `.godot/` ou `build/`.
+2. Acompanhe [Actions](https://github.com/henrique-purri/porto-lume/actions). O push
+   inicia **Build Web e publicar no GitHub Pages** automaticamente. Para repetir
+   sem alterar o código, abra o workflow e use **Run workflow → main → Run workflow**.
+3. Espere os jobs **Godot 4.6.3 · Web single-thread** e **Publicar jogo** ficarem
+   verdes no commit desejado. A atualização de veículos só está publicada depois
+   da conclusão do segundo job.
+4. Abra o endereço HTTPS do jogo no Safari. O mesmo link serve para todas as
+   versões; recarregue a página para carregar a publicação mais recente.
 
 Se o projeto estiver em `porto-lume/` dentro do repositório, o workflow também o
 encontra. Porém **`.github/workflows/deploy-pages.yml` precisa ficar sempre na raiz
@@ -54,20 +33,34 @@ Se a branch principal tiver outro nome, ajuste `branches: [main]` no workflow.
 ## Abrir e validar no iPhone
 
 Abra a URL HTTPS no **Safari**, gire o aparelho para landscape, toque em
-**Iniciar** e mova o joystick à esquerda. Se necessário, desligue o bloqueio de
+**Iniciar exploração** e mova o joystick à esquerda. Se necessário, desligue o bloqueio de
 rotação. A primeira abertura baixa o runtime do Godot e pode demorar na rede
 móvel. Mantenha o Safari/iOS atualizado para suporte a WebGL 2 e WebAssembly.
 
-Teste as oito direções, colisão com prédios, acompanhamento da câmera, soltar o
-joystick, tocar com outro dedo na direita e trocar de app/voltar. O teste
-automatizado não substitui a validação em um iPhone físico.
+No protótipo 02, aproxime-se do **carro coral** e toque em **ENTRAR**, à direita.
+Use o joystick horizontal para virar e mantenha **ACELERAR** pressionado com
+outro dedo. **FREAR / RÉ** primeiro para o veículo e depois recua, se continuar
+pressionado. Soltar os pedais produz desaceleração progressiva. Arrastar o dedo
+para fora de um pedal o libera; um novo toque é necessário para acioná-lo.
+
+**SAIR** estaciona e procura espaço seguro ao lado do carro. Se não houver
+posição livre, o personagem permanece dentro e aparece **Sem espaço para sair**.
+A mesma câmera acompanha o personagem a pé e o carro durante a direção.
+O segundo carro é um obstáculo estacionado com colisão, sem interação.
+
+Teste as oito direções a pé, direção com dois dedos, frenagem/ré, colisões,
+entrada/saída, giro da tela e troca de app/retorno. No computador, use
+**WASD/setas** e **E** para entrar/sair. O teste automatizado não substitui a
+validação em um iPhone físico.
 
 ## O que a automação faz
 
 - Usa a imagem **`barichello/godot-ci:4.6.3`**, fixada também por digest, com engine
   e templates oficiais já instalados. Não depende da instalação deste Codex Cloud.
-- Confere a versão exata e o template `web_nothreads_release.zip`, importa o
-  projeto e executa `tools/export_web.sh` e `tests/smoke_test.gd`.
+- Confere a versão exata e os templates `web_nothreads_debug.zip` e
+  `web_nothreads_release.zip`, importa o projeto e executa `tools/export_web.sh`.
+- Executa `tests/smoke_test.gd` e `tests/vehicle_test.gd` para validar o mapa,
+  movimento, controles, direção, colisões e entrada/saída do veículo.
 - Verifica que HTML, JavaScript, WASM e PCK existem, confere as assinaturas dos
   binários e a sintaxe do JavaScript e inclui `.nojekyll`.
 - Envia todo `build/web/` como artefato e publica pelo fluxo oficial do Pages.
