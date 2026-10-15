@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/pedestrian.gd" id="1_pedestrian"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 9.0
+
+[node name="Pedestrian" type="CharacterBody2D" groups=["pedestrians"]]
+z_index = 3
+collision_layer = 8
+collision_mask = 7
+motion_mode = 1
+safe_margin = 0.08
+script = ExtResource("1_pedestrian")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")

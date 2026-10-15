@@ -122,7 +122,7 @@ func find_safe_exit_position(vehicle: CharacterBody2D) -> Vector2:
 	var safe_bounds := world_bounds.grow(-_exit_shape.radius)
 	var query := PhysicsShapeQueryParameters2D.new()
 	query.shape = _exit_shape
-	query.collision_mask = 5 # Construções, limites e todos os veículos.
+	query.collision_mask = 13 # Construções, veículos e pedestres na posição de saída.
 	query.exclude = [_player.get_rid()]
 	query.collide_with_areas = false
 	for offset: Vector2 in offsets:

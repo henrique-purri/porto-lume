@@ -250,7 +250,7 @@ func _check_exiting() -> void:
 	await _physics_steps(2)
 	_check(_interaction.get("current_vehicle") == null and not bool(_car.get("driven")) \
 		and _player.visible and _player.is_physics_processing() \
-		and _player.collision_layer == 2 and _player.collision_mask == 5 \
+		and _player.collision_layer == 2 and _player.collision_mask == 13 \
 		and _player.global_position.distance_to(_car.global_position) < 90.0 \
 		and not _body_overlaps_world(_player),
 		"the same action exits beside a building into a nearby position clear of car and walls")

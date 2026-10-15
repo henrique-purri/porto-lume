@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://world/city.tscn" id="2_city"]
 [ext_resource type="PackedScene" path="res://player/player.tscn" id="3_player"]
 [ext_resource type="PackedScene" path="res://ui/mobile_hud.tscn" id="4_hud"]
 [ext_resource type="Script" path="res://scripts/vehicle_interaction.gd" id="5_interaction"]
+[ext_resource type="Script" path="res://scripts/pedestrian_manager.gd" id="6_pedestrians"]
 
 [node name="PortoLume" type="Node2D"]
 script = ExtResource("1_main")
@@ -19,3 +20,6 @@ z_index = 5
 
 [node name="VehicleInteraction" type="Node" parent="."]
 script = ExtResource("5_interaction")
+
+[node name="PedestrianManager" type="Node2D" parent="."]
+script = ExtResource("6_pedestrians")

@@ -1,5 +1,5 @@
 extends Node2D
-## Cidade estática 2400 × 1800. Só o jogador e o HUD processam a cada frame.
+## Geometria estática 2400 × 1800; atores e população vivem em módulos separados.
 
 const WORLD_SIZE := Vector2(2400, 1800)
 const BUILDING_SCENE: PackedScene = preload("res://world/building.tscn")

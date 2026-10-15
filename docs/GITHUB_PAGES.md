@@ -20,7 +20,7 @@ novamente para atualizar o jogo.
    inicia **Build Web e publicar no GitHub Pages** automaticamente. Para repetir
    sem alterar o código, abra o workflow e use **Run workflow → main → Run workflow**.
 3. Espere os jobs **Godot 4.6.3 · Web single-thread** e **Publicar jogo** ficarem
-   verdes no commit desejado. A atualização de veículos só está publicada depois
+   verdes no commit desejado. A atualização do Protótipo 03 só está publicada depois
    da conclusão do segundo job.
 4. Abra o endereço HTTPS do jogo no Safari. O mesmo link serve para todas as
    versões; recarregue a página para carregar a publicação mais recente.
@@ -37,7 +37,7 @@ Abra a URL HTTPS no **Safari**, gire o aparelho para landscape, toque em
 rotação. A primeira abertura baixa o runtime do Godot e pode demorar na rede
 móvel. Mantenha o Safari/iOS atualizado para suporte a WebGL 2 e WebAssembly.
 
-No protótipo 02, aproxime-se do **carro coral** e toque em **ENTRAR**, à direita.
+No Protótipo 03, aproxime-se do **carro coral** e toque em **ENTRAR**, à direita.
 Use o joystick horizontal para virar e mantenha **ACELERAR** pressionado com
 outro dedo. **FREAR / RÉ** primeiro para o veículo e depois recua, se continuar
 pressionado. Soltar os pedais produz desaceleração progressiva. Arrastar o dedo
@@ -48,10 +48,24 @@ posição livre, o personagem permanece dentro e aparece **Sem espaço para sair
 A mesma câmera acompanha o personagem a pé e o carro durante a direção.
 O segundo carro é um obstáculo estacionado com colisão, sem interação.
 
+O Protótipo 03 adiciona até **dez pedestres simultâneos**, com roupas amarelas,
+azuis, verdes e roxas, velocidades e acessórios variados. Eles escolhem destinos
+próximos nas calçadas, fazem pausas e mudam de rota quando bloqueados. A população
+acompanha o personagem a pé ou dirigindo; NPCs muito distantes são removidos e
+recriados depois. Um carro conduzido em movimento nas proximidades provoca fuga.
+Um contato causa apenas queda e knockback, seguidos de recuperação, sem sangue ou
+sistema de dano. Os controles existentes continuam iguais.
+
 Teste as oito direções a pé, direção com dois dedos, frenagem/ré, colisões,
 entrada/saída, giro da tela e troca de app/retorno. No computador, use
 **WASD/setas** e **E** para entrar/sair. O teste automatizado não substitui a
 validação em um iPhone físico.
+
+Observe também as caminhadas pelas calçadas e as colisões com construções.
+Aproxime-se de um pedestre com o carro para verificar a fuga; encoste nele para
+testar queda e recuperação. Explore outros quarteirões para conferir a renovação
+da população. O limite, as decisões espaçadas e o grafo compartilhado reduzem o
+trabalho por frame; as medições no ambiente Cloud não equivalem ao FPS de um iPhone.
 
 ## O que a automação faz
 
@@ -59,8 +73,9 @@ validação em um iPhone físico.
   e templates oficiais já instalados. Não depende da instalação deste Codex Cloud.
 - Confere a versão exata e os templates `web_nothreads_debug.zip` e
   `web_nothreads_release.zip`, importa o projeto e executa `tools/export_web.sh`.
-- Executa `tests/smoke_test.gd` e `tests/vehicle_test.gd` para validar o mapa,
-  movimento, controles, direção, colisões e entrada/saída do veículo.
+- Executa `tests/smoke_test.gd`, `tests/vehicle_test.gd` e
+  `tests/pedestrian_test.gd` para validar mapa, movimento, controles, direção,
+  entrada/saída, limite de população, rotas, obstáculos, fuga e knockback.
 - Verifica que HTML, JavaScript, WASM e PCK existem, confere as assinaturas dos
   binários e a sintaxe do JavaScript e inclui `.nojekyll`.
 - Envia todo `build/web/` como artefato e publica pelo fluxo oficial do Pages.

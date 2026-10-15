@@ -49,6 +49,7 @@ pointing/emulate_mouse_from_touch=false
 2d_physics/layer_1="Construções e limites"
 2d_physics/layer_2="Jogador"
 2d_physics/layer_3="Veículos"
+2d_physics/layer_4="Pedestres"
 
 [rendering]
 renderer/rendering_method="gl_compatibility"

@@ -9,6 +9,7 @@ extends Node2D
 func _ready() -> void:
 	player.set("joystick", joystick)
 	vehicle_interaction.setup(player, $HUD, $City/Vehicles)
+	$PedestrianManager.setup(player, vehicle_interaction, $City/Vehicles)
 
 
 func _notification(what: int) -> void:
