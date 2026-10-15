@@ -5,9 +5,17 @@ na mesma rede, servidor local ou backend. A exportação usa **Godot 4.6.3 Stand
 Compatibility/WebGL 2 e WebAssembly sem threads**, compatível com hospedagem
 estática no GitHub Pages sem cabeçalhos COOP/COEP.
 
-**Situação deste ambiente:** não há repositório Git inicializado, remoto GitHub ou
-credenciais de publicação conectadas. Por isso, o workflow foi criado nos
-arquivos, mas ainda não executou no GitHub e ainda não há URL pública do jogo.
+**Repositório:** [henrique-purri/porto-lume](https://github.com/henrique-purri/porto-lume),
+branch `main`. O projeto foi enviado e o build Web passou no GitHub Actions com
+Godot e templates 4.6.3. O artefato `github-pages` contém o jogo exportado.
+A publicação exige habilitar Pages nas configurações: a integração tem acesso
+ao código e ao Actions, mas a API administrativa do Pages retorna 403.
+
+O responsável pelo repositório deve abrir
+[Settings → Pages](https://github.com/henrique-purri/porto-lume/settings/pages)
+e escolher **GitHub Actions** em **Source**. Depois, repita o job de publicação
+que falhou ou execute o workflow novamente. O repositório continua privado;
+se o GitHub exigir um plano compatível, essa escolha cabe ao proprietário.
 
 ## Preparar o repositório uma única vez
 

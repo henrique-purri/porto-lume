@@ -29,9 +29,9 @@ O workflow `.github/workflows/deploy-pages.yml` constrói o jogo com **Godot 4.6
 
 Após a publicação, abra no Safari do iPhone a URL HTTPS exibida pelo job **deploy**. Gire o aparelho para landscape e toque em **Iniciar exploração**. Desative o bloqueio de rotação se necessário. O endereço de um projeto normalmente segue `https://USUARIO.github.io/REPOSITORIO/`; use a URL real do deploy.
 
-Esta pasta, por si só, não cria um repositório remoto nem habilita o Pages. Para publicar a partir do Codex, conecte sua conta GitHub e informe o repositório de destino. Não abra o HTML pelo app Arquivos: o Godot precisa servir também JavaScript, WebAssembly e o pacote do jogo por HTTP/HTTPS.
+O repositório do projeto é [henrique-purri/porto-lume](https://github.com/henrique-purri/porto-lume), na branch `main`. Não abra o HTML pelo app Arquivos: o Godot precisa servir também JavaScript, WebAssembly e o pacote do jogo por HTTP/HTTPS.
 
-**Estado desta entrega:** o código do jogo passou nos testes do Godot, mas o build Web não foi concluído neste ambiente. O proxy recusou o download parcial dos templates e o download completo atingiu o limite de 120 segundos. O workflow usa uma imagem com Godot e templates 4.6.3 já instalados para fazer a exportação no GitHub. Ainda não foi executado nem publicado, porque não há repositório conectado.
+**Build verificado:** o [GitHub Actions](https://github.com/henrique-purri/porto-lume/actions) confirmou Godot e templates **4.6.3**, executou os testes e gerou HTML, JS, WASM e PCK. O artefato `github-pages` contém o build completo. A publicação depende de **Settings → Pages → Source: GitHub Actions** estar habilitado; a integração usada para enviar o código não tem permissão para ativar essa opção. A visibilidade privada do repositório foi preservada.
 
 A exportação usa caminhos relativos, funciona em subpastas do Pages e não requer backend ou cabeçalhos de isolamento de origem. O servidor `tools/serve_web.py` fica disponível apenas para desenvolvimento; ele não faz parte do acesso pelo iPhone.
 
