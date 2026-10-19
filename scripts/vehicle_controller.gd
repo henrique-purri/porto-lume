@@ -1,6 +1,8 @@
 extends CharacterBody2D
 ## Arcade driving. The HUD supplies independent throttle and steering values.
 
+const VEHICLE_CONTACTS: Script = preload("res://scripts/vehicle_contacts.gd")
+
 @export var control_source: Node
 @export_range(100.0, 600.0, 1.0) var maximum_forward_speed: float = 340.0
 @export_range(40.0, 300.0, 1.0) var maximum_reverse_speed: float = 130.0
@@ -64,31 +66,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _notify_pedestrian_contacts(previous: Transform2D, delta: float) -> void:
-	# Pedestres recebem impulso sem virar uma parede para o carro. A consulta
-	# usa somente o percurso realmente realizado, nunca uma trajetória através
-	# de uma construção onde move_and_slide já impediu a passagem.
-	var displacement := global_position - previous.origin
-	var actual_velocity := displacement / maxf(delta, 0.0001)
-	if actual_velocity.length_squared() < 36.0:
-		return
-	var query := PhysicsShapeQueryParameters2D.new()
-	query.shape = _collision_shape.shape
-	query.collision_mask = 8
-	query.exclude = [get_rid()]
-	query.collide_with_areas = false
-	var contacted: Dictionary = {}
-	var steps := clampi(ceili(displacement.length() / 10.0), 1, 4)
-	for step in range(steps + 1):
-		query.transform = previous.interpolate_with(global_transform, float(step) / float(steps)) * _collision_shape.transform
-		for contact: Dictionary in get_world_2d().direct_space_state.intersect_shape(query, 16):
-			var pedestrian: Object = contact.get("collider")
-			if not is_instance_valid(pedestrian) or not pedestrian.has_method("receive_vehicle_hit"):
-				continue
-			var identifier := pedestrian.get_instance_id()
-			if contacted.has(identifier):
-				continue
-			contacted[identifier] = true
-			pedestrian.call("receive_vehicle_hit", actual_velocity, global_position)
+	VEHICLE_CONTACTS.notify(self, _collision_shape, previous, delta)
 
 
 func _update_speed(throttle: float, delta: float) -> void:

@@ -18,6 +18,8 @@ var _player: CharacterBody2D
 var _interaction: Node
 var _vehicles: Node2D
 var _vehicle_threat: CharacterBody2D
+var _traffic_source: Node
+var _vehicle_sources: Array[CharacterBody2D] = []
 var _pedestrians: Array[CharacterBody2D] = []
 var _random := RandomNumberGenerator.new()
 var _maintenance_timer: Timer
@@ -55,6 +57,23 @@ func setup(player: CharacterBody2D, interaction: Node, vehicles: Node2D) -> void
 	refresh_population.call_deferred(true)
 
 
+func set_traffic_source(source: Node) -> void:
+	_traffic_source = source
+	_refresh_vehicle_sources()
+	for pedestrian: CharacterBody2D in get_pedestrians():
+		pedestrian.call("set_vehicle_sources", _vehicle_sources)
+
+
+func _refresh_vehicle_sources() -> void:
+	_vehicle_sources.clear()
+	if is_instance_valid(_vehicle_threat):
+		_vehicle_sources.append(_vehicle_threat)
+	if is_instance_valid(_traffic_source) and _traffic_source.has_method("get_vehicles"):
+		for candidate: CharacterBody2D in _traffic_source.call("get_vehicles"):
+			if is_instance_valid(candidate) and not candidate.is_queued_for_deletion() and not _vehicle_sources.has(candidate):
+				_vehicle_sources.append(candidate)
+
+
 func get_focus_actor() -> Node2D:
 	if is_instance_valid(_interaction):
 		var driven: Variant = _interaction.get("current_vehicle")
@@ -85,6 +104,7 @@ func refresh_population(initial: bool = false) -> void:
 	var actor := get_focus_actor()
 	if not is_instance_valid(actor):
 		return
+	_refresh_vehicle_sources()
 	var center := actor.global_position
 	for index in range(_pedestrians.size() - 1, -1, -1):
 		var pedestrian := _pedestrians[index]
@@ -114,6 +134,7 @@ func refresh_population(initial: bool = false) -> void:
 		add_child(pedestrian)
 		pedestrian.call("configure", paths, point, _random.randi(), _spawn_serial % 5)
 		pedestrian.call("set_vehicle_threat", _vehicle_threat)
+		pedestrian.call("set_vehicle_sources", _vehicle_sources)
 		_pedestrians.append(pedestrian)
 		_spawn_serial += 1
 		needed -= 1
@@ -127,6 +148,9 @@ func _can_spawn(point: Vector2) -> bool:
 			return false
 	for vehicle: Node in _vehicles.get_children():
 		if vehicle is Node2D and (vehicle as Node2D).global_position.distance_squared_to(point) < 70.0 * 70.0:
+			return false
+	for vehicle: CharacterBody2D in _vehicle_sources:
+		if is_instance_valid(vehicle) and vehicle.global_position.distance_squared_to(point) < 70.0 * 70.0:
 			return false
 	var query := PhysicsShapeQueryParameters2D.new()
 	query.shape = _spawn_shape

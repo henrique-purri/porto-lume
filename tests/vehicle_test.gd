@@ -32,6 +32,7 @@ func _run() -> void:
 	# Keep the original driving/exit fixtures free of random NPC blockers.
 	# The pedestrian integration suite covers NPC contact and safe exits.
 	_main.get_node("PedestrianManager").call("set_population_enabled", false)
+	_main.get_node("TrafficManager").call("set_population_enabled", false)
 	_player = _main.get_node_or_null("Player") as CharacterBody2D
 	_car = _main.get_node_or_null("City/Vehicles/ParkedCar") as CharacterBody2D
 	_interaction = _main.get_node_or_null("VehicleInteraction")

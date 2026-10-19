@@ -1,4 +1,4 @@
-# Porto Lume — Protótipo 03 · Godot 2D
+# Porto Lume — Protótipo 04 · Godot 2D
 
 Protótipo original de exploração urbana top-down para smartphones. Feito em **Godot 4.6.3, GDScript e renderer Compatibility (WebGL 2)**. Gráficos são placeholders geométricos desenhados no Godot, sem dependências de arte ou plugins.
 
@@ -12,11 +12,12 @@ Protótipo original de exploração urbana top-down para smartphones. Feito em *
 - Botão contextual **ENTRAR/SAIR**, pedais touchscreen independentes e câmera suave que acompanha o jogador ou o carro.
 - Saída do veículo em uma posição livre próxima; se não houver espaço seguro, o jogador permanece dentro.
 - Até **10 pedestres ativos**, andando nas calçadas, com velocidades, cores de roupa, bonés, mochilas e tons de pele variados.
-- Pedestres desviam de um carro conduzido que se aproxima. Um contato produz apenas queda e knockback; depois eles se levantam e voltam a andar.
+- Pedestres desviam dos carros em movimento. Um contato produz apenas queda e knockback; depois eles se levantam e voltam a andar.
+- Trânsito com até **6 veículos NPC ativos**, seguindo faixas, fazendo curvas nos cruzamentos e esperando outros carros. Cores, velocidades, aceleração e distância de seguimento variam.
 - Interface adaptável ao tamanho da tela e prioridade landscape. Controles liberam os toques ao perder foco ou mudar a orientação.
 - Teclado WASD/setas e **E** para entrar/sair; também é possível arrastar o joystick e pressionar os botões com o mouse.
 
-O personagem tem uma jaqueta coral e começa na rua ao sul do cruzamento central. O mapa, os nomes e os elementos visuais são originais. Não foram adicionados carros dirigidos por NPCs, trânsito, polícia, wanted, armas, combate, dano, missões ou dinheiro.
+O personagem tem uma jaqueta coral e começa na rua ao sul do cruzamento central. O mapa, os nomes e os elementos visuais são originais. Não foram adicionados polícia, wanted, perseguições, armas, combate, dano, missões ou dinheiro. Os veículos do trânsito ainda não podem ser controlados pelo jogador.
 
 ## Como dirigir
 
@@ -29,13 +30,25 @@ O personagem tem uma jaqueta coral e começa na rua ao sul do cruzamento central
 
 No teclado, **W/↑** acelera, **S/↓** freia e recua, **A/D** ou **←/→** viram e **E** entra/sai. A pé, WASD/setas continuam movendo o personagem nas oito direções.
 
-## Pedestres do Protótipo 03
+## Pedestres
 
 A população acompanha o personagem a pé ou o carro controlado. O limite é de **10 NPCs simultâneos**: eles surgem em pontos livres das calçadas entre 150 e 760 unidades do corpo controlado. A cada 0,75 segundo, o gerenciador remove os que estão a mais de 1100 unidades e cria até dois substitutos; a população inicial pode preencher o limite de uma vez. Isso mantém o trabalho limitado enquanto o jogador explora a cidade. Ao perder o foco, a simulação dos pedestres é suspensa.
 
 O grafo compartilhado tem **192 pontos nas calçadas** ao redor dos seis quarteirões e **42 pontos em passagens internas** para retomar a rota após um deslocamento. Cada pedestre escolhe um destino próximo, caminha por dois a cinco saltos do grafo e faz pequenas pausas. As velocidades variam entre **45 e 72 unidades por segundo**; camisetas amarelas, azuis, verdes e roxas distinguem os pedestres do jogador coral. Física e colisões impedem atravessar prédios, o jogador e carros. Um caminho bloqueado provoca parada e nova escolha de direção.
 
-As decisões são distribuídas em intervalos de **0,18 a 0,28 segundo** por NPC. Um carro conduzido em movimento a menos de aproximadamente **150 unidades** provoca uma tentativa de fuga pela calçada, com velocidade multiplicada por **1,85**. No contato, o pedestre cai e recebe um impulso amortecido. A queda dura cerca de **um segundo**, sem sangue, pontos de vida ou dano; se houver um carro sobre ele, espera ou se afasta antes de levantar. Um intervalo de **1,6 segundo** entre reações evita quedas repetidas no mesmo contato. Ao se recuperar, ele retorna às rotas normais.
+As decisões são distribuídas em intervalos de **0,18 a 0,28 segundo** por NPC. Um carro em movimento a menos de aproximadamente **150 unidades**, seja do jogador ou do trânsito, provoca uma tentativa de fuga pela calçada, com velocidade multiplicada por **1,85**. No contato, o pedestre cai e recebe um impulso amortecido. A queda dura cerca de **um segundo**, sem sangue, pontos de vida ou dano; se houver um carro sobre ele, espera ou se afasta antes de levantar. Um intervalo de **1,6 segundo** entre reações evita quedas repetidas no mesmo contato. Ao se recuperar, ele retorna às rotas normais.
+
+## Trânsito do Protótipo 04
+
+O limite é de **6 veículos NPC simultâneos**, além do carro coral e do carro estacionado original. O alvo da população é **4 a pé** e **6 ao dirigir**, podendo ficar abaixo disso quando não há pontos seguros disponíveis. O gerenciador acompanha o corpo controlado e cria no máximo um substituto por manutenção, a cada **0,8 segundo**. A população inicial pode criar até quatro veículos.
+
+O grafo compartilhado usa **12 cruzamentos**, em uma grade de quatro colunas por três linhas, com as posições das ruas existentes. Cada sentido ocupa uma faixa deslocada **32 unidades à direita** do eixo da rua. Os carros escolhem o próximo vizinho sem fazer retorno, com uma pequena preferência por seguir reto. Segmentos retos e curvas quadráticas amostradas ligam as faixas; os trajetos mantêm o corpo do veículo sobre o asfalto. As velocidades de cruzeiro variam entre **100 e 145 unidades por segundo**, e a aceleração entre **75 e 120**. A distância desejada e o tempo de seguimento também variam.
+
+Uma fila por cruzamento libera **um veículo por vez**. O carro aguarda antes da entrada, só entra quando a saída tem espaço e mantém a reserva até a traseira deixar a área do cruzamento. Sensores à frente atualizados em intervalos distribuídos de **0,10 a 0,16 segundo** reduzem a velocidade ou param diante de carros, pedestres e obstáculos. Se o jogador bloquear a rua, o trânsito aguarda; não troca de faixa nem atravessa o bloqueio. Colisões físicas impedem a sobreposição entre veículos, sem dano ou perseguições.
+
+Os pontos de criação ficam em trechos retos, fora da câmera real com uma margem de **160 unidades**, a pelo menos **520 unidades** do corpo controlado e dentro de um raio de **1400**. Uma consulta física rejeita locais ocupados e mantém distância dos demais carros. Veículos a mais de **1700 unidades** podem ser removidos somente quando estão fora da tela. Reduções da população também preservam os carros visíveis. Se não houver local elegível, o gerenciador espera a próxima manutenção; nenhum carro precisa surgir dentro da câmera para preencher o limite.
+
+`traffic_routes.gd` contém a geometria e as escolhas de rota; `traffic_manager.gd` mantém população e prioridade nos cruzamentos; `traffic_vehicle.gd` controla a condução de cada NPC. Essa separação permite novos tipos de veículos no futuro sem alterar os controles ou adicionar agora polícia, táxis ou ambulâncias.
 
 ## Abrir no Godot
 
@@ -51,11 +64,11 @@ O MVP já está publicado em **[https://henrique-purri.github.io/porto-lume/](ht
 
 O workflow `.github/workflows/deploy-pages.yml` constrói o jogo com **Godot 4.6.3 e templates da mesma versão** em ambiente preparado, verifica os arquivos exportados e publica no Pages a cada atualização da branch `main`. Também pode ser iniciado manualmente pela aba Actions. O Pages precisa usar **GitHub Actions** como origem em **Settings → Pages**.
 
-Abra o endereço acima no Safari do iPhone, gire o aparelho para landscape e toque em **Iniciar exploração**. Desative o bloqueio de rotação se necessário. A atualização do Protótipo 03 ficará disponível nesse mesmo endereço depois que os jobs de build e publicação do respectivo commit estiverem verdes.
+Abra o endereço acima no Safari do iPhone, gire o aparelho para landscape e toque em **Iniciar exploração**. Desative o bloqueio de rotação se necessário. A atualização do Protótipo 04 ficará disponível nesse mesmo endereço depois que os jobs de build e publicação do respectivo commit estiverem verdes.
 
 O repositório do projeto é [henrique-purri/porto-lume](https://github.com/henrique-purri/porto-lume), na branch `main`. Não abra o HTML pelo app Arquivos: o Godot precisa servir também JavaScript, WebAssembly e o pacote do jogo por HTTP/HTTPS.
 
-O [GitHub Actions](https://github.com/henrique-purri/porto-lume/actions) confere Godot e templates **4.6.3**, executa os três testes integrados e verifica HTML, JS, WASM e PCK. O artefato `github-pages` contém o build completo. O Pages já está configurado; cada push em `main` inicia uma nova publicação. O resultado de cada atualização aparece nos jobs **Godot 4.6.3 · Web single-thread** e **Publicar jogo**.
+O [GitHub Actions](https://github.com/henrique-purri/porto-lume/actions) confere Godot e templates **4.6.3**, executa os quatro testes integrados e verifica HTML, JS, WASM e PCK. O artefato `github-pages` contém o build completo. O Pages já está configurado; cada push em `main` inicia uma nova publicação. O resultado de cada atualização aparece nos jobs **Godot 4.6.3 · Web single-thread** e **Publicar jogo**.
 
 A exportação usa caminhos relativos, funciona em subpastas do Pages e não requer backend ou cabeçalhos de isolamento de origem. O servidor `tools/serve_web.py` fica disponível apenas para desenvolvimento; ele não faz parte do acesso pelo iPhone.
 
@@ -65,7 +78,7 @@ A exportação usa caminhos relativos, funciona em subpastas do Pages e não req
 - Exportação **single-thread**; não requer `SharedArrayBuffer`, COOP/COEP ou service worker.
 - A página respeita notch e indicador de início com `safe-area-inset-*`, bloqueia o scroll durante o toque e redimensiona o canvas ao girar.
 - Landscape é uma preferência; o Safari pode exigir que você gire o aparelho manualmente. O shell orienta o usuário em portrait.
-- Cena simples, sem iluminação dinâmica, bake de navegação, áudio, texturas grandes ou lógica de tráfego. Os pedestres compartilham um grafo pequeno, têm limite de população e decisões distribuídas; não há procura de todos os pares de NPCs a cada frame.
+- Cena simples, sem iluminação dinâmica, bake de navegação, áudio ou texturas grandes. Pedestres e trânsito compartilham grafos pequenos, têm limites de população e decisões distribuídas. Sensores usam consultas físicas curtas; não há planejamento de rotas sobre a cidade inteira a cada frame.
 - O primeiro carregamento baixa o runtime Web do Godot. Não foi implementado suporte offline.
 
 ## Gerar novamente a versão Web
@@ -88,7 +101,7 @@ O script usa `godot` ou a variável `GODOT_BIN` para localizar o executável. Re
 project.godot                Configuração, inputs, resolução e renderer
 export_presets.cfg           Preset Web single-thread
 scenes/
-  main.tscn                  Composição: mundo + jogador + pedestres + HUD
+  main.tscn                  Composição: mundo + jogador + pedestres + trânsito + HUD
 scripts/
   main.gd                    Conecta jogador, HUD, veículos e população
   city.gd                    Planta do bairro, ruas, decoração e limites
@@ -103,6 +116,10 @@ scripts/
   pedestrian.gd              Caminhada, aparência, fuga, queda e recuperação
   pedestrian_paths.gd        Grafo compartilhado de calçadas e rotas próximas
   pedestrian_manager.gd      Limite, criação e remoção da população local
+  traffic_routes.gd          Grafo de faixas, pontos de criação e curvas
+  traffic_vehicle.gd         Condução, frenagem, sensores e espera de cada NPC
+  traffic_manager.gd         População local, criação segura e cruzamentos
+  vehicle_contacts.gd        Contato compartilhado dos veículos com pedestres
 world/
   city.tscn                  Cena do bairro e posições dos carros
   building.tscn              Construção StaticBody2D reutilizável
@@ -113,6 +130,7 @@ npc/
 vehicles/
   driveable_car.tscn         Carro coral controlável, com corpo e colisão
   parked_car.tscn            Carro estacionado com colisão, sem interação
+  traffic_car.tscn           Veículo NPC reutilizável com colisão física
 ui/
   mobile_hud.tscn            CanvasLayer da interface
   virtual_joystick.tscn      Controle reutilizável
@@ -128,6 +146,7 @@ tests/
   smoke_test.gd              Validação integrada do protótipo
   vehicle_test.gd            Direção, colisão, entrada/saída e multitouch
   pedestrian_test.gd         População, rotas, obstáculos, fuga e knockback
+  traffic_test.gd            Faixas, cruzamentos, filas, colisões e população
 build/web/                   Saída gerada pela exportação (não versionada)
 .github/workflows/
   deploy-pages.yml           Build automático e publicação HTTPS no GitHub Pages
@@ -139,20 +158,23 @@ Arquivos `.uid` ao lado dos scripts são gerados pelo Godot para manter referên
 
 O mapa usa `world/building.tscn` instanciado pela planta em `scripts/city.gd`. A colisão de cada construção acompanha seu `footprint`. O jogador aceita qualquer Node com `get_direction() -> Vector2`; o veículo consulta `get_drive_throttle()` e `get_drive_steering()` no HUD. `vehicle_interaction.gd` coordena a troca de controle, mantém a mesma câmera e verifica posições de saída com a física do mundo. Para alterar o tamanho do mundo, ajuste também os limites da câmera em `player/player.tscn` e `world_bounds` no sistema de interação.
 
-`pedestrian_manager.gd` controla a população e compartilha uma instância de `pedestrian_paths.gd` entre os NPCs. `pedestrian.gd` mantém os estados de caminhada, pausa, fuga e queda. Os pedestres usam a camada física 4 (valor de máscara 8); jogador, veículos e verificações de saída mantêm as colisões e posições seguras. A separação entre população, rotas e comportamento permite ampliar o sistema futuramente sem alterar os controles atuais.
+`pedestrian_manager.gd` controla a população e compartilha uma instância de `pedestrian_paths.gd` entre os NPCs. `pedestrian.gd` mantém os estados de caminhada, pausa, fuga e queda. Os pedestres usam a camada física 4 (valor de máscara 8); jogador, veículos e verificações de saída mantêm as colisões e posições seguras. Todos os carros usam a camada física 3 (valor 4), permitindo que os sistemas atuais reconheçam o trânsito como obstáculo. A entrada permanece limitada ao carro coral original. A separação entre população, rotas e comportamento permite ampliar os sistemas sem alterar os controles atuais.
 
 ## Verificação
 
-Execute os três testes integrados pelo terminal:
+Execute os quatro testes integrados pelo terminal:
 
 ```bash
 godot --headless --path . --script res://tests/smoke_test.gd
 godot --headless --path . --script res://tests/vehicle_test.gd
 godot --headless --path . --script res://tests/pedestrian_test.gd
+godot --headless --path . --script res://tests/traffic_test.gd
 ```
 
 No iPhone, valide andar nas oito direções, aproximar-se do carro coral e entrar, usar joystick e pedal com dedos diferentes, frear até engatar ré, soltar os pedais e sair. Encoste o carro em prédios, limites e no carro estacionado; tente sair com um lado bloqueado. Gire a tela e alterne apps durante o controle. A câmera deve seguir o corpo ativo sem girar o mapa, e nenhum dedo solto deve deixar um controle pressionado.
 
 Observe os pedestres caminhando e fazendo pausas nas calçadas. Aproxime o carro para verificar a fuga e encoste em um pedestre para observar queda, afastamento e recuperação. Percorra os quarteirões a pé e dirigindo: novos pedestres podem aparecer na região, mas o total ativo nunca deve ultrapassar dez. Nenhum pedestre deve atravessar construções, e sair do veículo deve continuar exigindo uma posição livre.
+
+Observe o trânsito fazendo curvas e esperando nos cruzamentos. Pare o carro coral na faixa para conferir a frenagem e a formação de fila; depois libere a via e verifique se os veículos retomam o caminho. Teste o contato entre carros sem atravessamento e a saída segura ao lado de um veículo NPC. Explore o mapa a pé e dirigindo, verificando que carros só aparecem fora da câmera e que o limite de seis é respeitado. A suíte de trânsito mede também o custo de física com a população limitada; o valor no Cloud não representa FPS em hardware iOS.
 
 O teste automatizado e a exportação podem ser validados em navegador neste ambiente, mas não substituem o teste em um iPhone físico. Não foi medida uma taxa de FPS em hardware iOS.

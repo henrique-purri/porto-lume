@@ -12,6 +12,8 @@ var appearance_variant: int = 0
 var _paths: RefCounted
 var _rng := RandomNumberGenerator.new()
 var _vehicle: CharacterBody2D
+var _manual_vehicle_threat: CharacterBody2D
+var _vehicle_sources: Array[CharacterBody2D] = []
 var _route := PackedVector2Array()
 var _route_index: int = 0
 var _state: StringName = &"paused"
@@ -44,7 +46,13 @@ func configure(path_provider: RefCounted, spawn_position: Vector2, seed_value: i
 
 
 func set_vehicle_threat(vehicle: CharacterBody2D) -> void:
+	_manual_vehicle_threat = vehicle
 	_vehicle = vehicle
+
+
+func set_vehicle_sources(candidates: Array[CharacterBody2D]) -> void:
+	# The manager mutates this shared list in place as local traffic streams.
+	_vehicle_sources = candidates
 
 
 func set_simulation_enabled(enabled: bool) -> void:
@@ -120,9 +128,29 @@ func _think() -> void:
 
 
 func _is_vehicle_threatening() -> bool:
-	return is_instance_valid(_vehicle) and bool(_vehicle.get("driven")) \
-		and absf(float(_vehicle.get("speed"))) > 12.0 \
-		and global_position.distance_squared_to(_vehicle.global_position) < THREAT_DISTANCE * THREAT_DISTANCE
+	var nearest_distance: float = THREAT_DISTANCE * THREAT_DISTANCE
+	_vehicle = null
+	for candidate: CharacterBody2D in _vehicle_sources:
+		# A traffic body may be freed between population maintenance ticks.
+		# Guard before passing it to a typed method: Godot rejects freed objects
+		# as typed arguments even when the callee would check their validity.
+		if not is_instance_valid(candidate) or not _is_moving_vehicle(candidate):
+			continue
+		var distance: float = global_position.distance_squared_to(candidate.global_position)
+		if distance < nearest_distance:
+			nearest_distance = distance
+			_vehicle = candidate
+	# Preserve the single-vehicle fixture/API without maintaining another list.
+	if is_instance_valid(_manual_vehicle_threat) and _is_moving_vehicle(_manual_vehicle_threat):
+		var distance: float = global_position.distance_squared_to(_manual_vehicle_threat.global_position)
+		if distance < nearest_distance:
+			_vehicle = _manual_vehicle_threat
+	return is_instance_valid(_vehicle)
+
+
+func _is_moving_vehicle(candidate: CharacterBody2D) -> bool:
+	return is_instance_valid(candidate) and not candidate.is_queued_for_deletion() \
+		and bool(candidate.get("driven")) and absf(float(candidate.get("speed"))) > 12.0
 
 
 func _request_route(flee: bool) -> void:

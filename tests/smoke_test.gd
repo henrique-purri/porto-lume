@@ -25,6 +25,7 @@ func _run() -> void:
 	# Keep the original movement/collision fixtures free of random NPC blockers.
 	# The pedestrian integration suite exercises the populated city separately.
 	_main.get_node("PedestrianManager").call("set_population_enabled", false)
+	_main.get_node("TrafficManager").call("set_population_enabled", false)
 	_player = _main.get_node_or_null("Player") as CharacterBody2D
 	_joystick = _main.get_node_or_null("HUD/Controls/Joystick") as Control
 	if not _check(_player != null and _joystick != null, "player and real mobile joystick exist"):
