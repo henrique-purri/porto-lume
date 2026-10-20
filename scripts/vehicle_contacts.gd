@@ -28,4 +28,8 @@ static func notify(body: CharacterBody2D, collision_shape: CollisionShape2D, pre
 			if contacted.has(identifier):
 				continue
 			contacted[identifier] = true
-			pedestrian.call("receive_vehicle_hit", actual_velocity, body.global_position)
+			var accepted: bool = bool(pedestrian.call("receive_vehicle_hit", actual_velocity, body.global_position))
+			if accepted and body.is_in_group("player_controlled_vehicle"):
+				var crime_system := body.get_tree().get_first_node_in_group("crime_system")
+				if is_instance_valid(crime_system):
+					crime_system.call("register_crime", &"pedestrian_hit", body, pedestrian)

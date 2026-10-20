@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/police_vehicle.gd" id="1_controller"]
+[ext_resource type="Script" path="res://scripts/police_visual.gd" id="2_visual"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_body"]
+radius = 21.0
+height = 80.0
+
+[node name="PoliceCar" type="CharacterBody2D" groups=["police_vehicles", "traffic_vehicles", "moving_vehicles"]]
+collision_layer = 4
+collision_mask = 7
+motion_mode = 1
+safe_margin = 0.08
+script = ExtResource("1_controller")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CapsuleShape2D_body")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+body_color = Color(0.878, 0.902, 0.863, 1)

@@ -10,6 +10,7 @@ signal vehicle_action_requested
 @onready var title: Control = $Controls/Title
 @onready var compass: Control = $Controls/Compass
 @onready var prototype: Label = $Controls/Prototype
+@onready var wanted_display: Control = $Controls/WantedDisplay
 @onready var hint: Label = $Controls/Hint
 @onready var joystick: Control = $Controls/Joystick
 @onready var vehicle_action: Control = $Controls/VehicleAction
@@ -42,6 +43,10 @@ func set_driving(value: bool) -> void:
 func set_vehicle_action(available: bool, driving: bool) -> void:
 	vehicle_action.caption = "SAIR" if driving else "ENTRAR"
 	vehicle_action.visible = available
+
+
+func set_wanted_status(level: int, state: StringName, heat: float = 0.0) -> void:
+	wanted_display.call("set_status", level, state, heat)
 
 
 func get_drive_throttle() -> float:
@@ -90,6 +95,11 @@ func _layout() -> void:
 	compass.position = Vector2(viewport_size.x - margin - 46.0, margin - 1.0)
 	prototype.position = Vector2(viewport_size.x - margin - 162.0, margin + 56.0)
 	prototype.size = Vector2(162.0, 20.0)
+	wanted_display.size = Vector2(300.0, 76.0)
+	wanted_display.position = Vector2((viewport_size.x - wanted_display.size.x) * 0.5, margin)
+	if viewport_size.x < 860.0:
+		# Keep the complete status below both header corners on narrow screens.
+		wanted_display.position.y = margin + 94.0
 	joystick.position = Vector2(margin, viewport_size.y - margin - 184.0)
 	joystick.size = Vector2(184.0, 184.0)
 	hint.position = Vector2(margin + 11.0, viewport_size.y - margin - 209.0)

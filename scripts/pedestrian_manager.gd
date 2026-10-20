@@ -19,6 +19,7 @@ var _interaction: Node
 var _vehicles: Node2D
 var _vehicle_threat: CharacterBody2D
 var _traffic_source: Node
+var _police_source: Node
 var _vehicle_sources: Array[CharacterBody2D] = []
 var _pedestrians: Array[CharacterBody2D] = []
 var _random := RandomNumberGenerator.new()
@@ -64,12 +65,21 @@ func set_traffic_source(source: Node) -> void:
 		pedestrian.call("set_vehicle_sources", _vehicle_sources)
 
 
+func set_police_source(source: Node) -> void:
+	_police_source = source
+	_refresh_vehicle_sources()
+
+
 func _refresh_vehicle_sources() -> void:
 	_vehicle_sources.clear()
-	if is_instance_valid(_vehicle_threat):
-		_vehicle_sources.append(_vehicle_threat)
-	if is_instance_valid(_traffic_source) and _traffic_source.has_method("get_vehicles"):
-		for candidate: CharacterBody2D in _traffic_source.call("get_vehicles"):
+	if is_instance_valid(_vehicles):
+		for candidate: Node in _vehicles.get_children():
+			if candidate is CharacterBody2D and candidate.has_method("set_driver_active"):
+				_vehicle_sources.append(candidate as CharacterBody2D)
+	for source: Node in [_traffic_source, _police_source]:
+		if not is_instance_valid(source) or not source.has_method("get_vehicles"):
+			continue
+		for candidate: CharacterBody2D in source.call("get_vehicles"):
 			if is_instance_valid(candidate) and not candidate.is_queued_for_deletion() and not _vehicle_sources.has(candidate):
 				_vehicle_sources.append(candidate)
 

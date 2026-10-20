@@ -16,6 +16,7 @@ var speed: float = 0.0
 
 var _steering: float = 0.0
 var _has_focus: bool = true
+var _vehicle_contacts: Dictionary = {}
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
 
@@ -25,6 +26,11 @@ func _ready() -> void:
 
 func set_driver_active(value: bool) -> void:
 	driven = value
+	if value:
+		add_to_group("player_controlled_vehicle")
+	else:
+		remove_from_group("player_controlled_vehicle")
+	_vehicle_contacts.clear()
 	stop()
 	set_physics_process(driven and _has_focus)
 
@@ -57,7 +63,9 @@ func _physics_process(delta: float) -> void:
 		_try_rotate(rotation_delta)
 	var forward: Vector2 = Vector2.UP.rotated(global_rotation)
 	velocity = forward * speed
+	var incoming_velocity := velocity
 	move_and_slide()
+	_report_vehicle_collisions(incoming_velocity)
 	if get_slide_collision_count() > 0:
 		# Keep only the speed that survived sliding, so a wall never stores thrust.
 		var actual_speed: float = get_real_velocity().dot(forward)
@@ -67,6 +75,27 @@ func _physics_process(delta: float) -> void:
 
 func _notify_pedestrian_contacts(previous: Transform2D, delta: float) -> void:
 	VEHICLE_CONTACTS.notify(self, _collision_shape, previous, delta)
+
+
+func _report_vehicle_collisions(incoming_velocity: Vector2) -> void:
+	var contacts: Dictionary = {}
+	for index in range(get_slide_collision_count()):
+		var collision := get_slide_collision(index)
+		var other := collision.get_collider() as CollisionObject2D
+		if not is_instance_valid(other) or other.collision_layer & 4 == 0:
+			continue
+		var identifier: int = other.get_instance_id()
+		contacts[identifier] = true
+		# A police car hitting an idle player is not a crime by the player.
+		# Sustained pushing also remains a single contact until they separate.
+		var own_impact: float = -incoming_velocity.dot(collision.get_normal())
+		var relative_impact: float = -(incoming_velocity - collision.get_collider_velocity()).dot(collision.get_normal())
+		if not driven or _vehicle_contacts.has(identifier) or own_impact < 45.0 or relative_impact < 45.0:
+			continue
+		var crime_system := get_tree().get_first_node_in_group("crime_system")
+		if is_instance_valid(crime_system):
+			crime_system.call("register_crime", &"vehicle_collision", self, other)
+	_vehicle_contacts = contacts
 
 
 func _update_speed(throttle: float, delta: float) -> void:

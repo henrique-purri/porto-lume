@@ -22,6 +22,8 @@ func _run() -> void:
 		return
 	_main = scene.instantiate() as Node2D
 	root.add_child(_main)
+	_main.get_node("CrimeSystem").call("set_enabled", false)
+	_main.get_node("PoliceManager").call("set_population_enabled", false)
 	# Keep the original movement/collision fixtures free of random NPC blockers.
 	# The pedestrian integration suite exercises the populated city separately.
 	_main.get_node("PedestrianManager").call("set_population_enabled", false)

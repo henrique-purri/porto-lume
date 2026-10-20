@@ -86,6 +86,16 @@ func get_active_count() -> int:
 	return get_vehicles().size()
 
 
+func release_vehicle(car: CharacterBody2D) -> bool:
+	# Ownership transfer replaces only a stopped civilian with the existing
+	# driveable scene. Remove its AI and crossing reservation immediately.
+	if not is_instance_valid(car) or not car in _vehicles or absf(float(car.get("speed"))) >= 12.0:
+		return false
+	_vehicles.erase(car)
+	_retire(car)
+	return true
+
+
 func get_target_count() -> int:
 	var driving: bool = is_instance_valid(_interaction) and is_instance_valid(_interaction.get("current_vehicle"))
 	return max_active_vehicles if driving else mini(walking_vehicle_target, max_active_vehicles)
@@ -138,8 +148,13 @@ func refresh_population(initial: bool = false) -> void:
 
 func _can_spawn(candidate: Dictionary) -> bool:
 	var point: Vector2 = candidate["position"]
-	for car: CharacterBody2D in _vehicles:
-		if is_instance_valid(car) and car.global_position.distance_squared_to(point) < 175.0 * 175.0:
+	# Population timers may run in the same physics tick. Newly added police
+	# and acquired cars can have transforms newer than PhysicsServer's query
+	# snapshot, so test the live scene positions across both populations too.
+	var nearby: Array[Node] = get_tree().get_nodes_in_group("moving_vehicles")
+	nearby.append_array(get_tree().get_nodes_in_group("player_controlled_vehicle"))
+	for car: Node in nearby:
+		if is_instance_valid(car) and not car.is_queued_for_deletion() and car is Node2D and (car as Node2D).global_position.distance_squared_to(point) < 175.0 * 175.0:
 			return false
 	var query := PhysicsShapeQueryParameters2D.new()
 	query.shape = _car_shape

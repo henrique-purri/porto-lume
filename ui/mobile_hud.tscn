@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/mobile_hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://ui/virtual_joystick.tscn" id="2_joystick"]
 [ext_resource type="PackedScene" path="res://ui/touch_action_button.tscn" id="3_button"]
+[ext_resource type="Script" path="res://ui/wanted_display.gd" id="4_wanted"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_label_shadow"]
 bg_color = Color(0.14902, 0.239216, 0.254902, 0.75)
@@ -121,8 +122,32 @@ theme_override_colors/font_color = Color(0.898039, 0.890196, 0.807843, 0.65)
 theme_override_colors/font_shadow_color = Color(0.06, 0.12, 0.13, 0.8)
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 10
-text = "PROTÓTIPO / 04"
+text = "PROTÓTIPO / 05"
 horizontal_alignment = 2
+
+[node name="WantedDisplay" type="Control" parent="Controls"]
+layout_mode = 0
+offset_left = 426.0
+offset_top = 26.0
+offset_right = 726.0
+offset_bottom = 102.0
+mouse_filter = 2
+script = ExtResource("4_wanted")
+
+[node name="StatusLabel" type="Label" parent="Controls/WantedDisplay"]
+layout_mode = 0
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 46.0
+offset_right = -8.0
+offset_bottom = 70.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 20
+text = "LIVRE"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Hint" type="Label" parent="Controls"]
 layout_mode = 0

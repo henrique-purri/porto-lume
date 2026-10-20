@@ -48,7 +48,7 @@ func configure(route_provider: RefCounted, spawn: Dictionary, seed_value: int, v
 	_rng.seed = seed_value
 	current_from = int(spawn.get("from", -1))
 	current_to = int(spawn.get("to", -1))
-	current_next = int(spawn["next"]) if spawn.has("next") else int(_routes.call("choose_next", current_from, current_to, _rng))
+	current_next = int(spawn["next"]) if spawn.has("next") else _choose_next_intersection()
 	global_position = spawn.get("position", Vector2.ZERO)
 	var direction: Vector2 = spawn.get("direction", _routes.call("get_direction", current_from, current_to))
 	global_rotation = direction.angle() + PI / 2.0
@@ -109,7 +109,7 @@ func _physics_process(delta: float) -> void:
 	if _perception_remaining <= 0.0:
 		_perception_remaining = _rng.randf_range(0.10, 0.16)
 		_refresh_obstacle_clearance()
-	var desired_speed: float = cruise_speed
+	var desired_speed: float = _get_cruise_speed()
 	var junction_travel_limit: float = INF
 	var entry_distance: float = (_entry_point - global_position).dot(_incoming_direction)
 	if not _has_entered_junction and entry_distance < 0.5:
@@ -123,7 +123,7 @@ func _physics_process(delta: float) -> void:
 			junction_travel_limit = stopping_space
 			desired_speed = minf(desired_speed, sqrt(2.0 * SERVICE_BRAKING * stopping_space))
 	if _has_entered_junction or entry_distance < 65.0:
-		desired_speed = minf(desired_speed, 90.0)
+		desired_speed = minf(desired_speed, _get_corner_speed())
 	var gap: float = following_gap + speed * following_headway
 	if is_finite(_obstacle_clearance):
 		var clear_space: float = maxf(_obstacle_clearance - gap, 0.0)
@@ -174,7 +174,7 @@ func _move_along_route(distance: float) -> void:
 		if _route_index >= active_route.size():
 			current_from = current_to
 			current_to = current_next
-			current_next = int(_routes.call("choose_next", current_from, current_to, _rng))
+			current_next = _choose_next_intersection()
 			_build_route()
 			if active_route.is_empty():
 				stop()
@@ -221,6 +221,20 @@ func _refresh_obstacle_clearance() -> void:
 	query.motion = forward * lookahead
 	var fractions := state.cast_motion(query)
 	_obstacle_clearance = float(fractions[0]) * lookahead if fractions.size() > 0 and fractions[0] < 0.999 else INF
+
+
+func _choose_next_intersection() -> int:
+	# Specialized road agents can choose destinations while retaining this
+	# controller's lane geometry, collision handling and junction reservations.
+	return int(_routes.call("choose_next", current_from, current_to, _rng))
+
+
+func _get_cruise_speed() -> float:
+	return cruise_speed
+
+
+func _get_corner_speed() -> float:
+	return 90.0
 
 
 func _try_face(direction: Vector2) -> bool:

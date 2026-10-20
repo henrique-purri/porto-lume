@@ -72,9 +72,9 @@ func get_state_name() -> StringName:
 	return _state
 
 
-func receive_vehicle_hit(vehicle_velocity: Vector2, vehicle_position: Vector2) -> void:
+func receive_vehicle_hit(vehicle_velocity: Vector2, vehicle_position: Vector2) -> bool:
 	if not _simulation_enabled or _hit_cooldown > 0.0 or vehicle_velocity.length_squared() < 36.0:
-		return
+		return false
 	_hit_cooldown = HIT_COOLDOWN
 	_last_hit_origin = vehicle_position
 	_fallen_remaining = 1.0
@@ -87,6 +87,7 @@ func receive_vehicle_hit(vehicle_velocity: Vector2, vehicle_position: Vector2) -
 	velocity = direction * clampf(vehicle_velocity.length() * 0.7 + 55.0, 85.0, 250.0)
 	collision_mask = 3
 	_set_state(&"fallen")
+	return true
 
 
 func _physics_process(delta: float) -> void:

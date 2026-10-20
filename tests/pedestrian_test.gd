@@ -46,6 +46,8 @@ func _run() -> void:
 		return
 	_main = scene.instantiate() as Node2D
 	root.add_child(_main)
+	_main.get_node("CrimeSystem").call("set_enabled", false)
+	_main.get_node("PoliceManager").call("set_population_enabled", false)
 	# Controlled pedestrian fixtures stay independent of random moving traffic.
 	# The traffic integration suite exercises both live populations together.
 	_main.get_node("TrafficManager").call("set_population_enabled", false)

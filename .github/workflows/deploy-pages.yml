@@ -72,6 +72,7 @@ jobs:
           godot --headless --path . --script res://tests/vehicle_test.gd
           godot --headless --path . --script res://tests/pedestrian_test.gd
           godot --headless --path . --script res://tests/traffic_test.gd
+          godot --headless --path . --script res://tests/wanted_test.gd
 
       - name: Conferir arquivos publicados
         working-directory: ${{ steps.project.outputs.path }}

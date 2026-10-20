@@ -31,6 +31,8 @@ func _run() -> void:
 	_main.get_node("TrafficManager").set("seed_value", 420026)
 	_main.get_node("PedestrianManager").set("seed_value", 430026)
 	root.add_child(_main)
+	_main.get_node("CrimeSystem").call("set_enabled", false)
+	_main.get_node("PoliceManager").call("set_population_enabled", false)
 	_player = _main.get_node_or_null("Player") as CharacterBody2D
 	_player_car = _main.get_node_or_null("City/Vehicles/ParkedCar") as CharacterBody2D
 	_interaction = _main.get_node_or_null("VehicleInteraction")
