@@ -1,11 +1,20 @@
 extends SceneTree
-## Real physics events, dispatch visibility, street pursuit and bounded spawning.
+## Real crimes, cone visibility, free emergency driving and bounded streaming.
 ## Run: godot --headless --path . --script res://tests/wanted_test.gd
 
 const POLICE_SCENE := preload("res://vehicles/police_car.tscn")
 const TRAFFIC_SCENE := preload("res://vehicles/traffic_car.tscn")
 const PEDESTRIAN_SCENE := preload("res://npc/pedestrian.tscn")
 const ACTIONS: Array[StringName] = [&"move_left", &"move_right", &"move_up", &"move_down"]
+
+class ClosedJunctions extends Node:
+	var requests: int = 0
+	func request_intersection(_car: CharacterBody2D, _junction: int) -> bool:
+		requests += 1
+		return false
+	func release_intersection(_car: CharacterBody2D, _junction: int) -> void:
+		pass
+
 
 class OpenTestPaths extends RefCounted:
 	func make_path(from: Vector2, _rng: RandomNumberGenerator) -> PackedVector2Array:
@@ -62,6 +71,7 @@ func _run() -> void:
 	await _check_physical_crimes()
 	await _check_theft()
 	await _check_police_routes_and_sight()
+	await _check_search_retirement()
 	await _check_dispatch_and_escape()
 	await _check_foot_and_vehicle_pursuit()
 	await _check_combined_performance()
@@ -385,10 +395,9 @@ func _check_theft() -> void:
 
 func _check_police_routes_and_sight() -> void:
 	_player.global_position = Vector2(100, 100)
+	# Ordinary patrol retains every existing traffic rule.
 	for next_id: int in [1, 6, 9]:
 		var car := _spawn_police(4, 5, next_id, Vector2(650, 932), 590026 + next_id)
-		var target: Vector2 = _routes.call("get_center", next_id)
-		car.call("set_pursuit", target, 1, 0)
 		var safe := true
 		var advanced := false
 		for step in range(420):
@@ -399,52 +408,147 @@ func _check_police_routes_and_sight() -> void:
 			if advanced:
 				break
 		_check(safe and advanced and int(car.get("current_to")) == next_id,
-			"real police pursue through a %s junction route while keeping their complete body on asphalt"
+			"patrolling police keep the complete body on asphalt through a %s junction"
 			% {1: "left-turn", 6: "straight", 9: "right-turn"}[next_id])
 		await _clear_fixtures()
-	var decisions: Dictionary = {}
+	var lease_car := _spawn_police(4, 5, 6, Vector2(650, 932), 599026)
+	var acquired := bool(lease_car.call("_request_intersection"))
+	lease_car.call("set_pursuit", Vector2(1180, 868), 1, 0)
+	var owners: Dictionary = _traffic.get("_junction_owners")
+	_check(acquired and int(lease_car.get("_reserved_junction")) == -1 and not owners.has(5),
+		"beginning emergency pursuit releases an existing civilian crossing reservation immediately")
+	await _clear_fixtures()
+	var closed := ClosedJunctions.new()
+	_main.add_child(closed)
+	_fixtures.append(closed)
+	var emergency := _spawn_police(4, 5, 6, Vector2(650, 932), 600026)
+	emergency.call("set_traffic_manager", closed)
+	await _steps(180)
+	_check(closed.requests > 0 and emergency.global_position.x < 757.1,
+		"a patrol waits before a crossing when ordinary traffic permission is denied")
+	emergency.call("set_pursuit", Vector2(1180, 868), 2, 0)
+	var old_requests := closed.requests
+	var safe := true
+	for _step in range(420):
+		await _steps(1)
+		safe = safe and not _overlaps(emergency, 5)
+	_check(safe and closed.requests == old_requests and emergency.global_position.x > 1090.0 \
+		and absf(emergency.global_position.y - 868.0) < 40.0,
+		"pursuit crosses without traffic permission and uses the opposite lane without passing through solid bodies")
+	await _clear_fixtures()
+	var civilian := _spawn_traffic(Vector2(730, 932), 601026)
+	civilian.set_physics_process(false)
+	var passing := _spawn_police(4, 5, 6, Vector2(560, 932), 601027)
+	passing.call("set_pursuit", Vector2(1150, 932), 2, 0)
+	safe = true
+	for _step in range(600):
+		await _steps(1)
+		safe = safe and not _overlaps(passing, 5)
+	_check(safe and passing.global_position.x > 900.0,
+		"an emergency unit passes a stopped civilian vehicle instead of waiting in its queue")
+	await _clear_fixtures()
+	var offroad := _spawn_police(4, 0, 1, Vector2(250, 750), 602026)
+	offroad.global_rotation = PI / 2.0
+	offroad.call("set_pursuit", Vector2(650, 750), 2, 0)
+	safe = true
+	var left_asphalt := false
+	for _step in range(720):
+		await _steps(1)
+		safe = safe and not _overlaps(offroad, 1)
+		left_asphalt = left_asphalt or not _on_road(offroad)
+	_check(safe and left_asphalt and offroad.global_position.distance_to(Vector2(650, 750)) < 90.0,
+		"pursuit goes around a building and enters an open pedestrian courtyard to reach the reported player")
+	var before_release := offroad.global_position
+	offroad.call("clear_pursuit")
+	_check(offroad.global_position.is_equal_approx(before_release), "ending pursuit never teleports an offroad police car onto a lane")
+	for _step in range(720):
+		await _steps(1)
+		safe = safe and not _overlaps(offroad, 5)
+	_check(safe and _on_road(offroad) and not bool(offroad.get("_returning")),
+		"a released offroad unit physically returns to a street and resumes ordinary patrol")
+	await _clear_fixtures()
 	var destinations: Dictionary = {}
 	for slot: int in [1, 2, 3]:
-		var car := _spawn_police(1, 5, 9, Vector2(868, 600), 600026 + slot)
+		var car := _spawn_police(1, 5, 9, Vector2(868, 600), 603026 + slot)
 		car.call("set_pursuit", Vector2(900, 900), 3, slot)
-		decisions[int(car.get("current_next"))] = true
 		destinations[car.get("intercept_position")] = true
 		_check(float(car.get("cruise_speed")) > 205.0, "wanted three increases police pressure above wanted two")
+		car.call("set_searching", true)
+		_check(car.call("get_police_state") == &"searching", "loss of sight changes emergency pursuit to search")
 		await _clear_fixtures()
-	_check(decisions.size() >= 3 and destinations.size() == 3,
-		"wanted-three interception slots distribute units toward different legal junction approaches")
-	var block_car := _spawn_police(4, 5, 6, Vector2(500, 932), 605026)
-	block_car.set("speed", 205.0)
-	block_car.call("set_pursuit", Vector2(430, 932), 2, 1, Vector2(100, 0))
-	var blocking := false
-	var blocked_safely := true
-	for _step in range(110):
-		await _steps(1)
-		blocking = blocking or block_car.call("get_police_state") == &"blocking"
-		blocked_safely = blocked_safely and block_car.global_position.x < 757.1 \
-			and _on_road(block_car) and not _overlaps(block_car, 5)
-	_check(blocking and blocked_safely and float(block_car.get("speed")) < 2.0,
-		"wanted-two interception can brake to a temporary roadblock before the junction without curb intrusion")
-	var stopped_at := block_car.global_position
-	await _steps(40)
-	_check(float(block_car.get("speed")) > 10.0 and block_car.global_position.distance_to(stopped_at) > 8.0,
-		"the temporary police roadblock releases itself and resumes street movement")
-	block_car.call("set_searching", true)
-	_check(block_car.call("get_police_state") == &"searching",
-		"losing the sighting cancels active blocking and changes the unit to search")
-	await _clear_fixtures()
+	_check(destinations.size() == 3, "multiple police slots retain different interception goals")
 	var sight_car := _spawn_police(0, 4, 5, Vector2(294, 400), 610026)
 	sight_car.set_physics_process(false)
-	_player.global_position = Vector2(294, 600)
+	sight_car.global_rotation = PI # Face down the sidewalk, not through a building.
+	for degrees: float in [-59.0, 0.0, 59.0, -61.0, 61.0, 180.0]:
+		# The x=294 sidewalk is open to the west. Use an open road for angular
+		# checks so a building does not mask an incorrect cone implementation.
+		sight_car.global_position = Vector2(900, 900)
+		_player.global_position = sight_car.global_position + Vector2.DOWN.rotated(deg_to_rad(degrees)) * 90.0
+		await _steps(2)
+		_check(bool(sight_car.call("can_see_target", _player)) == (absf(degrees) <= 60.0),
+			"the frontal 120-degree vision cone classifies a target at %.0f degrees" % degrees)
+	sight_car.global_rotation = 0.0
+	_player.global_position = Vector2(900, 800)
 	await _steps(2)
-	_check(bool(sight_car.call("can_see_target", _player)), "a nearby walking player on an open line is visible to police")
+	_check(bool(sight_car.call("can_see_target", _player)), "the vision cone rotates with the actual police car heading")
+	sight_car.global_position = Vector2(294, 400)
+	sight_car.global_rotation = PI / 2.0
 	_player.global_position = Vector2(540, 400)
 	await _steps(2)
-	_check(not bool(sight_car.call("can_see_target", _player)), "buildings block police sight instead of detecting through walls")
+	_check(not bool(sight_car.call("can_see_target", _player)), "a building blocks a target inside the vision cone")
+	sight_car.global_rotation = PI
 	_player.global_position = Vector2(294, 1100)
 	await _steps(2)
-	_check(not bool(sight_car.call("can_see_target", _player)), "police detection has a bounded distance")
+	_check(not bool(sight_car.call("can_see_target", _player)), "the frontal vision cone also has a bounded detection range")
 	await _clear_fixtures()
+
+
+func _check_search_retirement() -> void:
+	_crime.call("reset")
+	_player.global_position = Vector2(900, 1060)
+	_sync_camera()
+	var old_timeout := float(_police.get("search_timeout"))
+	var old_delay := float(_police.get("retirement_delay"))
+	_police.set("search_timeout", 0.35)
+	_police.set("retirement_delay", 0.2)
+	_crime.call("register_crime", &"test_max", _player)
+	_police.call("set_population_enabled", true)
+	for _pass in range(5):
+		_police.call("refresh_population")
+	var cars := _police_cars()
+	var positions: Array[Vector2] = [Vector2(868, 1180), Vector2(932, 1180), Vector2(868, 1300), Vector2(932, 1300)]
+	for index in range(cars.size()):
+		cars[index].set_physics_process(false)
+		cars[index].global_position = positions[index]
+		cars[index].global_rotation = PI # Player behind every cone.
+	await _steps(48)
+	_police.call("update_observation")
+	var released := _police_cars().size() == 4 and _level() == 3 and int(_police.call("get_target_count")) == 1
+	for car: CharacterBody2D in _police_cars():
+		released = released and int(car.get("pursuit_level")) == 0 and not car.is_queued_for_deletion()
+	_check(released, "an unseen search expires without erasing wanted or despawning any visible unit")
+	# First remove the excess, then prove the remaining former responder can
+	# retire below the distance threshold even with no excess population.
+	for index in range(1, cars.size()):
+		cars[index].global_position = Vector2(100, 100)
+	_police.call("refresh_population")
+	await _steps(2)
+	var last := cars[0]
+	last.global_position = Vector2(200, 200)
+	await _steps(2)
+	_police.call("refresh_population")
+	_check(last.is_queued_for_deletion() and not last.visible and last.collision_layer == 0 \
+		and last.global_position.distance_to(_player.global_position) < float(_police.get("despawn_radius")) \
+		and _police_cars().size() <= 1,
+		"a released former responder retires outside the camera after its delay without requiring extreme distance")
+	_crime.call("register_crime", &"vehicle_theft", _player)
+	_check(int(_police.call("get_target_count")) == 4, "a new reported crime reactivates dispatch after search expiration")
+	_police.set("search_timeout", old_timeout)
+	_police.set("retirement_delay", old_delay)
+	_police.call("set_population_enabled", false)
+	_crime.call("reset")
+	await _steps(2)
 
 
 func _check_dispatch_and_escape() -> void:
@@ -458,6 +562,7 @@ func _check_dispatch_and_escape() -> void:
 		return
 	var car: CharacterBody2D = cars[0]
 	car.global_position = Vector2(294, 400)
+	car.global_rotation = PI
 	car.set_physics_process(false)
 	_crime.call("register_crime", &"pedestrian_hit", _player, _player)
 	await _steps(2)
@@ -500,8 +605,8 @@ func _check_foot_and_vehicle_pursuit() -> void:
 	var start_distance := car.global_position.distance_to(_player.global_position)
 	await _steps(60)
 	_check(_police.call("get_focus_actor") == _player and _crime.get("state") == &"pursued" \
-		and car.global_position.distance_to(_player.global_position) < start_distance - 40.0 and _on_road(car),
-		"a moving patrol closes distance to a wanted pedestrian along the road")
+		and car.global_position.distance_to(_player.global_position) < start_distance - 40.0 and not _overlaps(car, 5),
+		"an emergency unit closes distance to the wanted pedestrian with real collisions")
 	_player.global_position = _car.global_position + Vector2(-60, 0)
 	await _steps(2)
 	var entered := bool(_interaction.call("request_vehicle_action"))
@@ -513,8 +618,8 @@ func _check_foot_and_vehicle_pursuit() -> void:
 	_release_actions()
 	_car.call("stop")
 	_police.call("update_observation")
-	_check(car.call("get_police_state") == &"pursuing" and _on_road(car) \
-		and not _overlaps(car, 5), "police keep using street routes while chasing the player driving")
+	_check(car.call("get_police_state") == &"pursuing" \
+		and not _overlaps(car, 5), "police continue emergency pursuit after control transfers to the player car")
 	_interaction.call("request_vehicle_action")
 	_police.call("set_population_enabled", false)
 	_crime.call("reset")
@@ -553,9 +658,10 @@ func _check_combined_performance() -> void:
 	for car: CharacterBody2D in _police_cars():
 		before[car.get_instance_id()] = car.global_position
 	var heat_before := _heat()
+	var police_clock_before := float(_police.get("_clock"))
 	_main.propagate_notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
 	await _steps(12)
-	var paused := is_equal_approx(_heat(), heat_before)
+	var paused := is_equal_approx(_heat(), heat_before) and is_equal_approx(float(_police.get("_clock")), police_clock_before)
 	for car: CharacterBody2D in _police_cars():
 		paused = paused and car.global_position.is_equal_approx(before[car.get_instance_id()]) \
 			and not car.is_physics_processing() and car.velocity.is_zero_approx()
@@ -581,7 +687,7 @@ func _check_combined_performance() -> void:
 		for car: CharacterBody2D in _police_cars():
 			moving = moving or float(car.get("speed")) > 10.0
 			if step % 6 == 0:
-				var on_road := _on_road(car)
+				var on_road := int(car.get("pursuit_level")) > 0 or bool(car.get("_returning")) or _on_road(car)
 				var overlaps := _overlaps(car, 5)
 				if (not on_road or overlaps) and not reported_violation:
 					reported_violation = true
@@ -600,7 +706,7 @@ func _check_combined_performance() -> void:
 				safe = safe and on_road and not overlaps
 	if not (safe and bounded and moving):
 		print("POLICE LIVE FLAGS: safe=%s bounded=%s moving=%s" % [safe, bounded, moving])
-	_check(safe and bounded and moving, "maximum live populations move without growth, vehicle overlap or police curb intrusion")
+	_check(safe and bounded and moving, "maximum populations move without growth, vehicle overlap or building intrusion during emergency driving")
 	if samples > 0:
 		var average_ms := total_ms / float(samples)
 		print("PERFORMANCE wanted: headless Cloud, 4 police + 6 cars + 10 pedestrians, %d physics samples, average %.3f ms, maximum %.3f ms; this is not an iPhone FPS measurement" % [samples, average_ms, maximum_ms])
@@ -636,6 +742,7 @@ func _spawn_police(from_id: int, to_id: int, next_id: int, position: Vector2, se
 	body.call("configure", _routes, {"from": from_id, "to": to_id, "next": next_id,
 		"position": position, "direction": direction}, seed_value, 0)
 	body.call("set_traffic_manager", _traffic)
+	body.call("set_police_manager", _police)
 	_fixtures.append(body)
 	return body
 
@@ -643,7 +750,7 @@ func _spawn_police(from_id: int, to_id: int, next_id: int, position: Vector2, se
 func _clear_fixtures() -> void:
 	for node: Node in _fixtures:
 		if is_instance_valid(node):
-			if node.has_method("release_intersection"):
+			if node is CharacterBody2D and node.has_method("release_intersection"):
 				node.call("release_intersection")
 			node.set_physics_process(false)
 			node.queue_free()

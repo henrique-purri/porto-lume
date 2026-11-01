@@ -1,8 +1,9 @@
 extends Node2D
 ## Small police population. Dispatch uses reported positions; sight uses walls.
-## Police share the existing traffic lanes, solid bodies and junction ownership.
+## Patrol shares civilian lanes; pursuit has independent obstacle navigation.
 
 const POLICE_SCENE: PackedScene = preload("res://vehicles/police_car.tscn")
+const NAVIGATION: Script = preload("res://scripts/police_navigation.gd")
 
 @export_range(0, 4) var max_active_police: int = 4
 @export var minimum_spawn_distance: float = 520.0
@@ -12,10 +13,13 @@ const POLICE_SCENE: PackedScene = preload("res://vehicles/police_car.tscn")
 @export var spawn_view_margin: float = 160.0
 @export var maintenance_interval: float = 0.8
 @export var perception_interval: float = 0.25
+@export var search_timeout: float = 18.0
+@export var retirement_delay: float = 8.0
 @export var seed_value: int = 0
 
 var population_enabled: bool = true
 var routes: RefCounted
+var _navigation: RefCounted = NAVIGATION.new()
 var _player: CharacterBody2D
 var _interaction: Node
 var _traffic: Node
@@ -30,6 +34,10 @@ var _suspended: bool = false
 var _dispatch_pending: bool = false
 var _known_position := Vector2.ZERO
 var _known_velocity := Vector2.ZERO
+var _clock: float = 0.0
+var _last_report_time: float = 0.0
+var _responded: Dictionary = {}
+var _retiring_since: Dictionary = {}
 
 
 func _ready() -> void:
@@ -70,7 +78,17 @@ func setup(player: CharacterBody2D, interaction: Node, traffic: Node, crime: Nod
 func _initial_population() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
+	_navigation.call("setup", get_world_2d(), _interaction.get("world_bounds"))
 	refresh_population(true)
+
+
+func _physics_process(delta: float) -> void:
+	if population_enabled and not _suspended:
+		_clock += delta
+
+
+func get_navigation() -> RefCounted:
+	return _navigation
 
 
 func get_focus_actor() -> Node2D:
@@ -101,6 +119,8 @@ func get_target_count() -> int:
 	if not is_instance_valid(_crime):
 		return 0
 	var level := int(_crime.get("wanted_level"))
+	if not _dispatch_pending:
+		return mini(1, max_active_police)
 	return mini([1, 1, 2, 4][clampi(level, 0, 3)], max_active_police)
 
 
@@ -118,7 +138,7 @@ func refresh_population(_initial: bool = false) -> void:
 		var car := _vehicles[index]
 		if not is_instance_valid(car):
 			_vehicles.remove_at(index)
-		elif car.is_queued_for_deletion() or (not excluded.has_point(car.global_position) and (car.global_position.distance_squared_to(center) > despawn_radius * despawn_radius or _vehicles.size() > target)):
+		elif car.is_queued_for_deletion() or (not excluded.has_point(car.global_position) and (car.global_position.distance_squared_to(center) > despawn_radius * despawn_radius or _vehicles.size() > target or _retirement_expired(car))):
 			_retire(car)
 			_vehicles.remove_at(index)
 	# Reinforcements are staggered even when several stars arrive at once.
@@ -182,6 +202,12 @@ func update_observation() -> void:
 		_known_position = target.global_position
 		_known_velocity = (target as CharacterBody2D).velocity if target is CharacterBody2D else Vector2.ZERO
 		_dispatch_pending = true
+		_last_report_time = _clock
+	elif _dispatch_pending and _clock - _last_report_time >= search_timeout:
+		# Search expires in simulation time. No endless reinforcement loop while
+		# the player is hidden: only another sighting/crime reactivates dispatch.
+		_dispatch_pending = false
+		_known_velocity = Vector2.ZERO
 	_crime.call("set_police_observation", seen, _known_position)
 	_send_orders(seen)
 
@@ -193,10 +219,15 @@ func _send_orders(seen: bool) -> void:
 		return first.global_position.distance_squared_to(_known_position) < second.global_position.distance_squared_to(_known_position))
 	var slot := 0
 	for car: CharacterBody2D in active:
+		var identifier := car.get_instance_id()
 		if level > 0 and _dispatch_pending and slot < get_target_count():
+			_responded[identifier] = true
+			_retiring_since.erase(identifier)
 			car.call("set_pursuit", _known_position, level, slot, _known_velocity)
 			car.call("set_searching", not seen)
 		else:
+			if _responded.has(identifier) and not _retiring_since.has(identifier):
+				_retiring_since[identifier] = _clock
 			car.call("clear_pursuit")
 		slot += 1
 
@@ -207,6 +238,7 @@ func _on_crime_registered(_type: StringName, _added: float, position: Vector2) -
 	_known_position = position
 	_known_velocity = Vector2.ZERO
 	_dispatch_pending = true
+	_last_report_time = _clock
 	_send_orders(false)
 
 
@@ -220,6 +252,9 @@ func _on_wanted_changed(level: int, _heat: float) -> void:
 func _retire(car: CharacterBody2D) -> void:
 	if not is_instance_valid(car):
 		return
+	var identifier := car.get_instance_id()
+	_responded.erase(identifier)
+	_retiring_since.erase(identifier)
 	car.call("release_intersection")
 	car.call("set_simulation_enabled", false)
 	car.collision_layer = 0
@@ -228,10 +263,17 @@ func _retire(car: CharacterBody2D) -> void:
 	car.queue_free()
 
 
+func _retirement_expired(car: CharacterBody2D) -> bool:
+	var identifier := car.get_instance_id()
+	return _retiring_since.has(identifier) and _clock - float(_retiring_since[identifier]) >= retirement_delay
+
+
 func clear_population() -> void:
 	for car: CharacterBody2D in _vehicles:
 		_retire(car)
 	_vehicles.clear()
+	_responded.clear()
+	_retiring_since.clear()
 	if is_instance_valid(_crime):
 		_crime.call("set_police_observation", false, _known_position)
 

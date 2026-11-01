@@ -52,7 +52,7 @@ Uma fila por cruzamento libera **um veículo por vez**. O carro aguarda antes da
 
 Os pontos de criação ficam em trechos retos, fora da câmera real com uma margem de **160 unidades**, a pelo menos **520 unidades** do corpo controlado e dentro de um raio de **1400**. Uma consulta física rejeita locais ocupados e mantém distância dos demais carros. Veículos a mais de **1700 unidades** podem ser removidos somente quando estão fora da tela. Reduções da população também preservam os carros visíveis. Se não houver local elegível, o gerenciador espera a próxima manutenção; nenhum carro precisa surgir dentro da câmera para preencher o limite.
 
-`traffic_routes.gd` contém a geometria e as escolhas de rota; `traffic_manager.gd` mantém população e prioridade nos cruzamentos; `traffic_vehicle.gd` controla a condução de cada NPC. As viaturas reutilizam essa condução e a mesma prioridade nos cruzamentos, acrescentando escolhas de destino de patrulha e perseguição. A separação permite outros tipos de veículos futuramente sem alterar os controles.
+`traffic_routes.gd` contém a geometria e as escolhas de rota; `traffic_manager.gd` mantém população e prioridade nos cruzamentos; `traffic_vehicle.gd` controla a condução de cada NPC. As viaturas reutilizam essa condução apenas em patrulha. Durante a perseguição, usam navegação própria e deixam de obedecer às faixas e à prioridade dos cruzamentos, mantendo as colisões físicas. A separação permite outros tipos de veículos futuramente sem alterar os controles.
 
 ## Crimes, heat e polícia do Protótipo 05
 
@@ -66,11 +66,15 @@ O `CrimeSystem` recebe eventos de gameplay e mantém **heat entre zero e 240**. 
 
 Empurrar um carro continuamente não gera heat a cada frame. Contatos provocados apenas por uma viatura ou pelo trânsito contra o carro parado do jogador não são atribuídos ao jogador. Batidas repetidas precisam de separação e de um novo impacto elegível. Entrar no carro coral inicial e voltar a um carro já adquirido são ações livres.
 
-O HUD mostra três estrelas geométricas e um estado por texto e cor: **LIVRE** quando o heat é zero, **EM PERSEGUIÇÃO** enquanto pelo menos uma viatura vê o corpo controlado e **ESCONDIDO · PROCURADO** quando ainda há heat, mas a polícia perdeu a visão. A visão usa distância de até **600 unidades** e uma consulta física bloqueada por construções. A posição procurada é atualizada por crimes e observações reais; a polícia não recebe continuamente a posição oculta do jogador.
+O HUD mostra três estrelas geométricas e um estado por texto e cor: **LIVRE** quando o heat é zero, **EM PERSEGUIÇÃO** enquanto pelo menos uma viatura vê o corpo controlado e **ESCONDIDO · PROCURADO** quando ainda há heat, mas a polícia perdeu a visão. A visão usa um **cone frontal de 120°**, alinhado à direção da viatura, com alcance de até **600 unidades**. O jogador atrás ou fora do cone não é visto; construções também bloqueiam a visão por consulta física, mesmo dentro do cone. A posição procurada é atualizada por crimes e observações reais; a polícia não recebe continuamente a posição oculta do jogador.
 
-O alvo é uma viatura em patrulha enquanto o jogador está livre. O alvo de resposta é **uma viatura no nível 1**, **duas no nível 2** e **quatro no nível 3**, com teto de quatro ativas. No nível 1, a viatura busca o último ponto conhecido pelas ruas. Nos níveis 2 e 3, perfis mais rápidos e diferentes pontos de interceptação tentam bloquear a rota e aproximar a polícia por direções distintas. Uma viatura já à frente do alvo observado pode aguardar na própria faixa por até dois segundos no nível 2 ou três no nível 3, com intervalo de oito segundos entre tentativas; esse bloqueio só acontece em trecho reto, fora do cruzamento e sem reserva ativa. A condução continua usando faixas, curvas, sensores e reservas de cruzamento; não há passagem por prédios ou teletransporte até o jogador. A perseguição acompanha o personagem a pé ou o carro atualmente controlado. Se o personagem entrar em uma área de pedestres, as viaturas procuram acesso pelas ruas próximas.
+O alvo é uma viatura em patrulha enquanto o jogador está livre. O alvo de resposta é **uma viatura no nível 1**, **duas no nível 2** e **quatro no nível 3**, com teto de quatro ativas. Em perseguição e busca, as viaturas liberam qualquer reserva de cruzamento e usam uma grade compartilhada de navegação, sem aguardar a fila civil. Podem usar a contramão, atravessar calçadas e entrar em pátios acessíveis para seguir o personagem a pé ou o carro controlado. Construções, limites e outros carros continuam sólidos; uma tentativa local de desvio permite ultrapassar trânsito parado. Não há teletransporte nem passagem através de obstáculos.
 
-O spawn policial segue pontos livres fora da câmera real, com margem de **160 unidades**, distância mínima de **520** e raio de até **1400** unidades. Enquanto há wanted, os reforços também ficam a até **900 unidades do último crime ou avistamento comunicado**, evitando usar o movimento oculto do jogador como destino de criação. A reposição cria no máximo uma viatura a cada **0,8 segundo**. Viaturas a mais de **1700 unidades**, ou excedentes após a redução do wanted, só são removidas fora da tela; o gerenciador pode adiar uma criação ou remoção para preservar essas condições.
+A grade tem células de **40 unidades** e margem conservadora de **43 unidades** para o corpo da viatura. É calculada uma vez a partir das colisões estáticas. Cada viatura recalcula seu caminho em intervalos distribuídos de **0,6 a 0,85 segundo**, com pequenas consultas locais para desviar de veículos. Níveis maiores aumentam a velocidade, e viaturas adicionais usam pontos distintos de interceptação baseados no último movimento observado. Ao perder a visão, todos os destinos voltam ao último relato confirmado; o movimento oculto do jogador não atualiza o caminho. Passagens estreitas demais para o carro permanecem inacessíveis.
+
+O spawn policial segue pontos livres fora da câmera real, com margem de **160 unidades**, distância mínima de **520** e raio de até **1400** unidades. Enquanto há resposta ativa, os reforços também ficam a até **900 unidades do último crime ou avistamento comunicado**. A reposição cria no máximo uma viatura a cada **0,8 segundo** e mantém a separação entre os veículos.
+
+A busca termina após **18 segundos de simulação sem avistamento ou novo crime**, sem apagar o wanted. As viaturas liberadas retornam fisicamente a uma faixa e retomam a patrulha. Uma viatura que respondeu à ocorrência pode ser removida depois de **oito segundos de liberação**, somente fora da câmera com a margem de 160 unidades, mesmo sem atingir uma distância extrema. Viaturas excedentes após a redução do wanted, ou a mais de **1700 unidades**, também só são removidas fora dessa região visível. Enquanto a busca está encerrada, o alvo volta a uma patrulha: o sistema não repõe continuamente quatro perseguidores em torno de um jogador escondido. Um novo avistamento ou crime reativa a resposta correspondente às estrelas atuais.
 
 Para escapar, interrompa novos crimes e quebre a linha de visão, por exemplo contornando um quarteirão e buscando cobertura. Após **oito segundos sem visão policial e sem novos crimes**, o heat cai **seis pontos por segundo**. As estrelas desaparecem ao cruzar cada limite, e o estado volta a **LIVRE** ao chegar a zero. Uma nova observação ou crime interrompe a redução e reinicia a espera. Perder o foco do Safari suspende a simulação em vez de conceder fuga em segundo plano.
 
@@ -102,7 +106,7 @@ A exportação usa caminhos relativos, funciona em subpastas do Pages e não req
 - Exportação **single-thread**; não requer `SharedArrayBuffer`, COOP/COEP ou service worker.
 - A página respeita notch e indicador de início com `safe-area-inset-*`, bloqueia o scroll durante o toque e redimensiona o canvas ao girar.
 - Landscape é uma preferência; o Safari pode exigir que você gire o aparelho manualmente. O shell orienta o usuário em portrait.
-- Cena simples, sem iluminação dinâmica, bake de navegação, áudio ou texturas grandes. Pedestres, trânsito e polícia usam grafos pequenos, têm limites de população e decisões distribuídas. Sensores usam consultas físicas curtas; não há planejamento de rotas sobre a cidade inteira a cada frame.
+- Cena simples, sem iluminação dinâmica, áudio ou texturas grandes. Pedestres, trânsito e polícia usam grafos pequenos, têm limites de população e decisões distribuídas. Sensores usam consultas físicas curtas; o planejamento policial usa uma grade pequena compartilhada e intervalos distribuídos, em vez de recalcular caminhos a cada frame.
 - O primeiro carregamento baixa o runtime Web do Godot. Não foi implementado suporte offline.
 
 ## Gerar novamente a versão Web
@@ -145,8 +149,9 @@ scripts/
   traffic_manager.gd         População local, criação segura e cruzamentos
   vehicle_contacts.gd        Contato compartilhado dos veículos com pedestres
   crime_system.gd            Registro de crimes, heat, estrelas e fuga
-  police_manager.gd          Resposta limitada, observações e spawn policial
-  police_vehicle.gd          Patrulha, perseguição e interceptação pelas ruas
+  police_manager.gd          Resposta, observações, busca e despawn policial
+  police_vehicle.gd          Patrulha, cone de visão e condução de emergência
+  police_navigation.gd       Grade compartilhada para desviar de construções
   police_visual.gd           Aparência e luzes simples da viatura
 world/
   city.tscn                  Cena do bairro e posições dos carros
@@ -159,7 +164,7 @@ vehicles/
   driveable_car.tscn         Carro coral controlável, com corpo e colisão
   parked_car.tscn            Base visual do carro estacionado original
   traffic_car.tscn           Veículo NPC reutilizável com colisão física
-  police_car.tscn            Viatura reutilizando a condução de trânsito
+  police_car.tscn            Viatura com patrulha e perseguição independentes
 ui/
   mobile_hud.tscn            CanvasLayer da interface
   wanted_display.gd          Estrelas geométricas e estado de perseguição
@@ -209,6 +214,6 @@ Observe os pedestres caminhando e fazendo pausas nas calçadas. Aproxime o carro
 
 Observe o trânsito fazendo curvas e esperando nos cruzamentos. Pare o carro coral na faixa para conferir a frenagem e a formação de fila; depois libere a via e verifique se os veículos retomam o caminho. Teste o contato entre carros sem atravessamento e a saída segura ao lado de um veículo NPC. Explore o mapa a pé e dirigindo, verificando que carros só aparecem fora da câmera e que o limite de seis é respeitado. A suíte de trânsito mede também o custo de física com a população limitada; o valor no Cloud não representa FPS em hardware iOS.
 
-Para validar o wanted no iPhone, entre no carro mostarda estacionado a noroeste do início: a primeira entrada gera heat e estrelas. Confira a reação das viaturas e o indicador de perseguição, tanto dirigindo quanto após sair do veículo. Faça novos crimes para aumentar a resposta e depois busque cobertura sem novos crimes: observe a transição para escondido, a redução progressiva das estrelas e o retorno a livre. Confira que nenhuma viatura aparece ao lado do personagem e que as colisões e os controles continuam funcionando.
+Para validar o wanted no iPhone, entre no carro mostarda estacionado a noroeste do início: a primeira entrada gera heat e estrelas. Confira a reação das viaturas e o indicador de perseguição, tanto dirigindo quanto após sair do veículo. Cruze uma faixa em contramão e entre em um pátio amplo: a polícia deve tentar acompanhar sem esperar a fila civil. Passe atrás de uma viatura e procure cobertura para testar o cone e a obstrução da visão. Faça novos crimes para aumentar a resposta e depois busque cobertura sem novos crimes: observe a transição para escondido, a redução progressiva das estrelas e o retorno a livre. Confira que nenhuma viatura aparece ao lado do personagem e que as colisões e os controles continuam funcionando.
 
 O teste automatizado e a exportação podem ser validados em navegador neste ambiente, mas não substituem o teste em um iPhone físico. Não foi medida uma taxa de FPS em hardware iOS.
